@@ -1,3 +1,4 @@
+import {authenticate} from '@loopback/authentication';
 import {service} from '@loopback/core';
 import {
   Count,
@@ -66,6 +67,7 @@ export class UsuarioController {
     return this.usuarioRepository.count(where);
   }
 
+  @authenticate("auth")
   @get('/usuario')
   @response(200, {
     description: 'Array of Usuario model instances',
@@ -180,6 +182,7 @@ export class UsuarioController {
     let usuario = await this.servicioSeguridad.identificarUsuario(credenciales);
     if ( usuario ){
       let codigo2fa = this.servicioSeguridad.crearTextoAleatorio(5);
+      console.log(codigo2fa)
       let login: Login = new Login();
       login.usuarioId = usuario._id!;
       login.codigo2fa = codigo2fa;
@@ -216,6 +219,20 @@ export class UsuarioController {
       let token = await this.servicioSeguridad.crearToken(usuario);
     if (usuario){
       usuario.clave = "";
+      try{
+        //busca
+      this.usuarioRepository.logins(usuario._id).patch(
+      {
+        estadoCodigo2fa: true,
+        token: token
+      },
+      {
+        estadoCodigo2fa:false
+      })
+
+    }catch{
+      console.log("No se ha almacenado el cambio del estado de token en la base de datos.")
+    }
       return {
         user: usuario,
         token: token
@@ -223,6 +240,6 @@ export class UsuarioController {
     }
     }
 
-    return new HttpErrors[401]("credenciales incorrectas")
+    return new HttpErrors[401]("codigo de 2fa invalido para el usuario definido")
     }
 }
